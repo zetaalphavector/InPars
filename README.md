@@ -1,2 +1,3 @@
-# inpars
-Inquisitive Parrots for Search
+# InPars: Inquisitive Parrots for Search
+
+Code will be available soon.

@@ -1,9 +1,9 @@
 import argparse
 import json
 import os
-import openai
 import re
 import time
+import openai
 from tqdm import tqdm
 
 
@@ -11,7 +11,6 @@ def parse_good_bad(data):
     text = data['text']
     if 'bad question:' not in text.lower():
         return '', ''
-     
     good_question, bad_question = re.split('bad question:', text, flags=re.IGNORECASE)
     good_question = good_question.strip()
     bad_question = bad_question.strip()
@@ -31,14 +30,6 @@ def parse_bad_good(data):
     return good_question, bad_question
 
 
-def find_index_window(context, window):
-    for i in reversed(range(0, len(context) - len(window))):
-        if context[i: i + len(window)] == window:
-            return i + len(window)
-
-    raise Exception(f'Window "{window}" not found in the context: "{context}"')
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--collection', type=str, default='/mnt/collection_shuffled.tsv')
@@ -52,11 +43,6 @@ if __name__ == '__main__':
     parser.add_argument('--top_p', type=float, default=1.0)
     parser.add_argument('--min_doc_chars', type=int, default=0, help='Minimum number of chars an input document must have.')
     parser.add_argument('--max_doc_chars', type=int, default=100000, help='Maximum number of chars an input document must have.')
-    parser.add_argument('--sleep_time', type=float, default=1.5, help='Time to wait between API calls, in seconds.')
-    parser.add_argument('--good_bad', action='store_true', help='If passed, parse good and bad questions.')
-    parser.add_argument('--bad_good', action='store_true', help='If passed, parse bad and good questions.')
-    parser.add_argument('--include_doc_probs', action='store_true', help='If passed, include probabilities from the input document in the "log_probs" field.')
-
     args = parser.parse_args()
 
     assert not (args.good_bad and args.bad_good), 'Use either good_bad or bad_good.'
@@ -94,7 +80,7 @@ if __name__ == '__main__':
                     n_docs_skipped += 1
                     print(f'Skipping because already seen. Skipped {n_docs_skipped} docs so far')
                     continue
-                
+
                 if len(doc_text) < args.min_doc_chars:
                     n_docs_skipped += 1
                     print(f'Skipping due to min len. Skipped {n_docs_skipped} docs so far')
@@ -104,7 +90,7 @@ if __name__ == '__main__':
                     n_docs_skipped += 1
                     print(f'Skipping due to max len. Skipped {n_docs_skipped} docs so far')
                     continue
-               
+
                 prompt_text = template_text.format(document_text=doc_text)
                 output = openai.Completion.create(
                     engine=args.engine,
@@ -126,23 +112,14 @@ if __name__ == '__main__':
 
                 index_start = 0
                 index_end = 0
-                if args.include_doc_probs:
-                    question = question.replace(prompt_text, '').strip()
-                    index_start = find_index_window(
-                        context=output['logprobs']["tokens"],
-                        window=["\n", "\n", "Example"," 4",":", "\n", "Document", ":"])
-                    
-                    index_end = find_index_window(
-                        context=output['logprobs']["tokens"],
-                        window=['Re', 'levant', ' Query', ':'])
 
                 try:
                     index_end += output['logprobs']["tokens"][index_end:].index('\n')
                 except ValueError:
                     index_end = len(output['logprobs']["tokens"])
-    
+
                 log_probs = output['logprobs']["token_logprobs"][index_start:index_end]
-                
+
                 output_dict = {
                     'doc_id': doc_id,
                     'doc_text': doc_text,

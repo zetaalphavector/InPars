@@ -27,7 +27,6 @@ if __name__ == '__main__':
     with open(args.input) as f:
         rows = []
         for line in tqdm(f):
-    
             row = json.loads(line.strip())
             if len(row['log_probs']) < args.min_tokens:
                 continue
@@ -39,9 +38,6 @@ if __name__ == '__main__':
 
             if args.scoring_function == 'mean_probs':
                 row['log_probs'] = np.exp(row['log_probs'])
-
-            if args.scoring_function == 'sum_log_probs':
-                row['log_probs'] = np.sum(row['log_probs'])
 
             if args.scoring_function == 'len':
                 if len(row['question']) < 10 or len(row['question']) > 200 or 'ITAG' in row['doc_text'] or len(row['doc_text']) < 300:

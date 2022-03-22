@@ -14,11 +14,6 @@ if __name__ == '__main__':
     parser.add_argument('--corpus', type=str, required=True)
     parser.add_argument('--index', type=str, default='msmarco-passage')
     parser.add_argument('--max_hits', type=int, default=1000)
-    parser.add_argument('--n_samples', type=int, default=100)
-    parser.add_argument('--skip_good_equal_bad', action='store_true',
-                        help='If passed, skip questions that are equal to bad ones.')
-    parser.add_argument('--bad_questions_as_negatives', action='store_true',
-                        help='If passed, use bad questions as negatives instead of BM25 negatives.')
 
     args = parser.parse_args()
 

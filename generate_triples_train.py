@@ -1,6 +1,6 @@
+import os
 import argparse
 import json
-import os
 import random
 from pyserini.search import SimpleSearcher
 from tqdm import tqdm

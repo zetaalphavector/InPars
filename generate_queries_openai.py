@@ -32,10 +32,10 @@ def parse_bad_good(data):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--collection', type=str, default='/mnt/collection_shuffled.tsv')
+    parser.add_argument('--collection', type=str)
     parser.add_argument('--output', type=str, required=True)
     parser.add_argument('--engine', type=str, default='curie')
-    parser.add_argument('--prompt_template', type=str, default='prompt_gpt3.txt')
+    parser.add_argument('--prompt_template', type=str, default='prompts/vanilla_prompt.txt')
     parser.add_argument('--max_examples', type=int, default=100000,
                         help='Maximum number of documents to read from the collection.')
     parser.add_argument('--max_tokens', type=int, default=64, help='Max tokens to be generated.')

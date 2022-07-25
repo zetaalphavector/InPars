@@ -52,7 +52,7 @@ if __name__ == '__main__':
             sampled_ranks = random.sample(range(len(hits)), min(len(hits), args.n_samples + 1))
             n_samples_so_far = 0
             for rank, hit in enumerate(hits):
-                neg_doc_id= hit.docid
+                neg_doc_id = hit.docid
                 if neg_doc_id == str(row['doc_id']):
                     mrr += 1 / (rank + 1)
                     recall += 1

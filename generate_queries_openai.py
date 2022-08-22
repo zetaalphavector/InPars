@@ -22,7 +22,6 @@ def parse_bad_good(data):
     text = data['text']
     if 'good question:' not in text.lower():
         return '', ''
-     
     bad_question, good_question = re.split('good question:', text, flags=re.IGNORECASE)
     good_question = good_question.strip()
     bad_question = bad_question.strip()
@@ -39,10 +38,17 @@ if __name__ == '__main__':
     parser.add_argument('--max_examples', type=int, default=100000,
                         help='Maximum number of documents to read from the collection.')
     parser.add_argument('--max_tokens', type=int, default=64, help='Max tokens to be generated.')
-    parser.add_argument('--temperature', type=float, default=0.0, help='Sampling temperature. Zero means greedy decoding.')
+    parser.add_argument('--temperature', type=float, default=0.0,
+                        help='Sampling temperature. Zero means greedy decoding.')
     parser.add_argument('--top_p', type=float, default=1.0)
-    parser.add_argument('--min_doc_chars', type=int, default=0, help='Minimum number of chars an input document must have.')
-    parser.add_argument('--max_doc_chars', type=int, default=100000, help='Maximum number of chars an input document must have.')
+    parser.add_argument('--min_doc_chars', type=int, default=0,
+                        help='Minimum number of chars an input document must have.')
+    parser.add_argument('--max_doc_chars', type=int, default=100000,
+                        help='Maximum number of chars an input document must have.')
+    parser.add_argument('--good_bad', action='store_true',
+                        help='The model should produce a good question.')
+    parser.add_argument('--bad_good', action='store_true',
+                        help='The model should produce a bad question.')
     args = parser.parse_args()
 
     assert not (args.good_bad and args.bad_good), 'Use either good_bad or bad_good.'

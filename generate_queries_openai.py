@@ -2,7 +2,6 @@ import argparse
 import json
 import os
 import re
-import time
 import openai
 from tqdm import tqdm
 
@@ -12,17 +11,6 @@ def parse_good_bad(data):
     if 'bad question:' not in text.lower():
         return '', ''
     good_question, bad_question = re.split('bad question:', text, flags=re.IGNORECASE)
-    good_question = good_question.strip()
-    bad_question = bad_question.strip()
-
-    return good_question, bad_question
-
-
-def parse_bad_good(data):
-    text = data['text']
-    if 'good question:' not in text.lower():
-        return '', ''
-    bad_question, good_question = re.split('good question:', text, flags=re.IGNORECASE)
     good_question = good_question.strip()
     bad_question = bad_question.strip()
 
@@ -46,15 +34,13 @@ if __name__ == '__main__':
     parser.add_argument('--max_doc_chars', type=int, default=100000,
                         help='Maximum number of chars an input document must have.')
     parser.add_argument('--good_bad', action='store_true',
-                        help='The model should produce a good question.')
-    parser.add_argument('--bad_good', action='store_true',
-                        help='The model should produce a bad question.')
+                        help='The model should produce a good question followed by a bad question.')          
+    parser.add_argument('--include_doc_probs', action='store_true',
+                        help='Wheter or not to save the tokens probabilities produeced by the model.')  
+
     args = parser.parse_args()
 
-    assert not (args.good_bad and args.bad_good), 'Use either good_bad or bad_good.'
-
     openai.api_key = os.getenv('OPENAI_API_KEY')
-
     with open(args.prompt_template) as f:
         template_text = f.read()
 
@@ -110,8 +96,9 @@ if __name__ == '__main__':
 
                 if args.good_bad:
                     question, bad_question = parse_good_bad(output)
-                elif args.bad_good:
-                    question, bad_question = parse_bad_good(output)
+                    print('question', question)
+                    print('badquestion', bad_question)
+
                 else:
                     question = output['text']
                     bad_question = ''
@@ -139,8 +126,8 @@ if __name__ == '__main__':
                 if line_num & (line_num - 1) == 0 or line_num % 1000 == 0:
                     # LOG every power of 2 or 1000 steps.
                     print(f'Document: {doc_text}\nQuestion: {question}\n')
+                
                 num_examples_so_far += 1
                 progress_bar.update(1)
 
-                time.sleep(args.sleep_time)
     print('Done!')

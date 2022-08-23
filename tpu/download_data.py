@@ -64,9 +64,9 @@ synths = [
 ]
 
 for dataset, pyserini_name, synth in zip(datasets, pyserini_names, synths):
-    Path(f"/{dataset}/pairs").mkdir(parents=True, exist_ok=True)
-    Path(f"/{dataset}/triples").mkdir(parents=True, exist_ok=True)
-    Path(f"/{dataset}/runs").mkdir(parents=True, exist_ok=True)
+    Path(f"{dataset}/pairs").mkdir(parents=True, exist_ok=True)
+    Path(f"{dataset}/triples").mkdir(parents=True, exist_ok=True)
+    Path(f"{dataset}/runs").mkdir(parents=True, exist_ok=True)
     wget.download(f"https://zav-public.s3.amazonaws.com/inpars/{synth}", f"{dataset}/")
     wget.download(
         f"https://huggingface.co/datasets/unicamp-dl/beir-runs/resolve/main/bm25/run.beir-v1.0.0-{pyserini_name}-flat.trec",

@@ -42,7 +42,7 @@ nohup python run_t5_3B_inpars.py \
 Download retrieval's scores for each dataset and evaluate:
 
 ```
-nohup python run_t5_3B_inpars.py \
+nohup python get_t5_3B_inpars.py \
     --gcp_path path_to_gcp_bucket \
     --tpu_proj project_name \
     --tpu_name tpu_name &

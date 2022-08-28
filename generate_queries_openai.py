@@ -33,6 +33,8 @@ if __name__ == '__main__':
                         help='Minimum number of chars an input document must have.')
     parser.add_argument('--max_doc_chars', type=int, default=100000,
                         help='Maximum number of chars an input document must have.')
+    parser.add_argument('--sleep_time', type=float, default=1.5, 
+                        help='Time to wait between API calls, in seconds.')
     parser.add_argument('--good_bad', action='store_true',
                         help='The model should produce a good question followed by a bad question.')          
     parser.add_argument('--include_doc_probs', action='store_true',
@@ -127,5 +129,6 @@ if __name__ == '__main__':
                 
                 num_examples_so_far += 1
                 progress_bar.update(1)
+                time.sleep(args.sleep_time)
 
     print('Done!')

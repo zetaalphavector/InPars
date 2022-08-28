@@ -96,8 +96,6 @@ if __name__ == '__main__':
 
                 if args.good_bad:
                     question, bad_question = parse_good_bad(output)
-                    print('question', question)
-                    print('badquestion', bad_question)
 
                 else:
                     question = output['text']

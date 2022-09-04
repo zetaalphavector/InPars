@@ -1,0 +1,21 @@
+Generate simple and complex questions that the document answers to.
+
+Example 1:
+Document: We don't know a lot about the effects of caffeine during pregnancy on you and your baby. So it's best to limit the amount you get each day. If you are pregnant, limit caffeine to 200 milligrams each day. This is about the amount in 1½ 8-ounce cups of coffee or one 12-ounce cup of coffee.     
+Simple question: Is a little caffeine ok during pregnancy?
+Complex question: How much caffeine is ok for a pregnant woman to have?
+
+Example 2:
+Document: Passiflora herbertiana. A rare passion fruit native to Australia. Fruits are green-skinned, white fleshed, with an unknown edible rating. Some sources list the fruit as edible, sweet and tasty, while others list the fruits as being bitter and inedible.
+Simple question: What fruit is native to Australia?
+Complex question: What is Passiflora herbertiana (a rare passion fruit) and how does it taste like?
+
+Example 3:
+Document: The Canadian Armed Forces. 1  The first large-scale Canadian peacekeeping mission started in Egypt on November 24, 1956. 2  There are approximately 65,000 Regular Force and 25,000 reservist members in the Canadian military. 3  In Canada, August 9 is designated as National Peacekeepers' Day.
+Simple question:  How large is the Canadian military?
+Complex question: Information on the Canadian Armed Forces size and history.
+
+
+Example 4:
+Document: {document_text}
+Simple question:

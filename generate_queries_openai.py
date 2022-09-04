@@ -3,14 +3,15 @@ import json
 import os
 import re
 import openai
+import time
 from tqdm import tqdm
 
 
 def parse_good_bad(data):
     text = data['text']
-    if 'bad question:' not in text.lower():
+    if 'complex question:' not in text.lower():
         return '', ''
-    good_question, bad_question = re.split('bad question:', text, flags=re.IGNORECASE)
+    bad_question, good_question = re.split('complex question:', text, flags=re.IGNORECASE)
     good_question = good_question.strip()
     bad_question = bad_question.strip()
 
@@ -33,7 +34,7 @@ if __name__ == '__main__':
                         help='Minimum number of chars an input document must have.')
     parser.add_argument('--max_doc_chars', type=int, default=100000,
                         help='Maximum number of chars an input document must have.')
-    parser.add_argument('--sleep_time', type=float, default=1.5, 
+    parser.add_argument('--sleep_time', type=float, default=1.0, 
                         help='Time to wait between API calls, in seconds.')
     parser.add_argument('--good_bad', action='store_true',
                         help='The model should produce a good question followed by a bad question.')          

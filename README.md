@@ -14,10 +14,13 @@ To generate synthetic queries, we use OpenAI API.
 You can generate synthetic queries for a given documents collection, using the curie model by running:
 
 ```
-python generate_queries_openai.py \
-    --collection path/to/collection \
-    --output path/to/synthetic/queries \
-    --engine curie
+python3 generate_queries_openai.py \
+    --collection ./msmarco/collection_shuffled.tsv \
+    --output ./data/msmarco/synthetic.jsonl \
+    --engine text-davinci-002 \
+    --prompt_template ./prompts/gbq_prompt_v2.txt \
+    --max_examples 10 \
+    --good_bad
 ```
 
 ## Filtering and creating training data

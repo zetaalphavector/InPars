@@ -10,50 +10,68 @@ We then finetune retrieval models on this synthetic data and use them to rerank 
 ![Ilustration of our method](src/inpars.png)
 
 ## How to Generate
-To generate synthetic queries, we use OpenAI API.
-You can generate synthetic queries for a given documents collection, using the curie model by running:
+
+Download the data, inclusding the document collection, you want to generate synthetic queries from.
+Here, we are provinding data from the MS MARCO dataset.
+```
+bash download_data.sh
+```
+
+To generate synthetic queries using the OpenAI models, you need to provide [your API_KEY](https://beta.openai.com/account/api-keys):
+```
+export API_KEY=<YOUR_KEY>
+```
+
+You can generate synthetic queries, using the Curie model by running:
 
 ```
 python generate_queries_openai.py \
-    --collection path/to/collection \
-    --output path/to/synthetic/queries \
+    --collection data/msmarco/collection.tsv \
+    --output data/msmarco/synthetic_queries.jsonl \
     --engine curie
 ```
 
 ## Filtering and creating training data
 Also, as reported on the paper, after generating the queries, we filter them by the score:
+<details>
+<summary>What's going on here?</summary>
 
+In this filtering step, you can choose three possible values to filter the synthetic queries to a small set.
+The values are: `sum_log_probs`, `mean_log_probs` and `mean_probs`. 
+For each synthetic query, there is a sequence of probabilities assigned by the LM to each token generated.
+The probabilities are used to compute the query probability. 
+</details>
 ```
 python filter_queries_by_score.py \
-    --input path/to/synthetic/queries \
-    --output path/to/filtered/synthetic/queries \
+    --input data/msmarco/synthetic_queries.jsonl \
+    --output data/msmarco/filtered_synthetic_queries.jsonl \
     --top_k 10000 \
     --scoring_function mean_log_probs
 ```
 
 # Training
-To train a monoT5 model using the synthetic training data, you need to generate the traning pairs by creating a positive and negative example for each query.
-Using BM25 to select the negatives examples, you can create the training data by:
+To train a monoT5 model using the filtered synthetic queries, you need to generate the traning pairs by creating a positive and negative example for each query.
+For the MS MARCO synthetic queries generated before, using BM25 to select the negatives examples, you can create the training data by:
 ```
 python generate_triples_train.py \
-    --input path/to/filtered/synthetic/queries \
-    --output path/to/synthetic.triples.train.tsv \
-    --output_ids $DATA/synthetic.triples.train.ids.tsv \
-    --corpus path/to/collection \
-    --index pyserini-index-name
+    --input data/msmarco/filtered_synthetic_queries.jsonl \
+    --output data/msmarco/synthetic.triples.train.tsv \
+    --output_ids data/msmarco/synthetic.triples.train.ids.tsv \
+    --corpus data/msmarco/collection.tsv \
+    --index msmarco-passage
 ```
-Finally, training a monoT5 model:
+Finally, training a monoT5 model using the synthetic data:
 
 ```
 python train_t5.py \
-    --base_model model_name_or_path \
-    --corpus path/to/collection \
-    --triples_train path/to/synthetic.triples.train.tsv \
-    --queries path/to/eval/queries \
-    --qrels path/to/eval/qrels/ \
-    --run path/to/eval/run \
+    --base_model t5_base \
+    --corpus data/msmarco/collection.tsv \
+    --triples_train data/msmarco/synthetic.triples.train.tsv \
+    --queries data/msmarco/topics.msmarco-passage.dev-subset.txt \
+    --qrels data/msmarco/qrels.msmarco-passage.dev-subset.txt \
+    --run data/msmarco/run.beir-v1.0.0-trec-covid-flat.trec \
     --relevance_threshold 2 \
-    --output_dir path/to/output/dir \
+    --output_dir data/msmarco/ \
     --save_every_n_steps 156 \
     --eval_steps 156 \
     --max_eval_queries 54 \

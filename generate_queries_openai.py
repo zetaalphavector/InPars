@@ -43,7 +43,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    openai.api_key = os.getenv('OPENAI_API_KEY')
+    openai.api_key = os.environ['API_KEY']
     with open(args.prompt_template) as f:
         template_text = f.read()
 

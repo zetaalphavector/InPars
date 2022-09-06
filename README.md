@@ -11,7 +11,7 @@ We then finetune retrieval models on this synthetic data and use them to rerank 
 
 ## How to Generate
 
-Download the data, inclusding the document collection, you want to generate synthetic queries from.
+Download the data, including the document collection, you want to generate synthetic queries from.
 Here, we are provinding data from the MS MARCO dataset.
 ```
 bash download_data.sh
@@ -41,6 +41,7 @@ The values are: `sum_log_probs`, `mean_log_probs` and `mean_probs`.
 For each synthetic query, there is a sequence of probabilities assigned by the LM to each token generated.
 The probabilities are used to compute the query probability. 
 </details>
+
 ```
 python filter_queries_by_score.py \
     --input data/msmarco/synthetic_queries.jsonl \

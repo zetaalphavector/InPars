@@ -5,7 +5,7 @@ InPars is a simple yet effective approach towards efficiently using large LMs in
 * [**InPars: Data Augmentation for Information Retrieval using Large Language Models**](https://arxiv.org/abs/2202.05144)
 
 In this work, we use large LMs to generate labeled data in a few-shot manner for IR tasks.
-We then finetune retrieval models on this synthetic data and use them to rerank the search results of a firs-stage retrieval system.
+We then finetune retrieval models on this synthetic data and use them to rerank the search results of a first-stage retrieval system.
 
 ![Ilustration of our method](src/inpars.png)
 

@@ -1,4 +1,4 @@
-# Automated download, train and evaluation on a GCP TPUv3
+# Training and evaluation of monoT5 on InPars using TPU's
 
 ## Download
 

@@ -9,8 +9,6 @@ Let's first download all the data which are:
 * Qrels
 * Queries
 * Corpus
-  
-Be sure to have at least 350GB available on disk and follow this [guide](https://github.com/castorini/pygaggle/blob/master/docs/experiments-monot5-tpu.md#setup-environment-on-vm) to install T5 dependencies.
 
 ```
 pip install -U pyserini
@@ -18,6 +16,8 @@ pip install wget ir-measures
 cd tpu/
 nohup python -u download_data.py &
 ```
+
+Be sure to have at least 350GB available on disk and follow this [guide](https://github.com/castorini/pygaggle/blob/master/docs/experiments-monot5-tpu.md#setup-environment-on-vm) to install T5 dependencies.
 
 # Finetuning on synthetic data
 Use a TPU v3-8 to train on each dataset:

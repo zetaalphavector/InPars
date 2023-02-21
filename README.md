@@ -111,7 +111,7 @@ Please make sure to update tests as appropriate.
 
 ## References
 
-Currently, if you use this tool you can cite the original [InPars paper published at SIGIR](https://dl.acm.org/doi/10.1145/3477495.3531863).
+Currently, if you use this tool you can cite the original [InPars paper published at SIGIR](https://dl.acm.org/doi/10.1145/3477495.3531863) or [InPars-v2](https://arxiv.org/abs/2301.01820).
 
 ```
 @inproceedings{inpars,
@@ -129,5 +129,17 @@ Currently, if you use this tool you can cite the original [InPars paper publishe
   keywords = {generative models, large language models, question generation, synthetic datasets, few-shot models, multi-stage ranking},
   location = {Madrid, Spain},
   series = {SIGIR '22}
+}
+```
+
+```
+@misc{inparsv2,
+  doi = {10.48550/ARXIV.2301.01820},
+  url = {https://arxiv.org/abs/2301.01820},
+  author = {Jeronymo, Vitor and Bonifacio, Luiz and Abonizio, Hugo and Fadaee, Marzieh and Lotufo, Roberto and Zavrel, Jakub and Nogueira, Rodrigo},
+  title = {{InPars-v2}: Large Language Models as Efficient Dataset Generators for Information Retrieval},
+  publisher = {arXiv},
+  year = {2023},
+  copyright = {Creative Commons Attribution 4.0 International}
 }
 ```

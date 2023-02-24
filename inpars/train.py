@@ -56,7 +56,7 @@ if __name__ == "__main__":
     set_seed(training_args.seed)
 
     total_examples = None
-    if training_args.max_steps:
+    if training_args.max_steps > 0:
         total_examples = training_args.gradient_accumulation_steps * training_args.per_device_train_batch_size * training_args.max_steps * torch.cuda.device_count()
 
     model = AutoModelForSeq2SeqLM.from_pretrained(args.base_model)

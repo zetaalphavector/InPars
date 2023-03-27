@@ -61,7 +61,8 @@ class MonoT5Reranker(Reranker):
             model_args["torch_dtype"] = torch.float16
         if self.int8:
             model_args["load_in_8bit"] = True
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path, device_map="auto", **model_args)
+            model_args["device_map"] = "auto"
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path, **model_args)
         self.model = torch.compile(self.model)
         self.model.to(self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
@@ -137,7 +138,7 @@ if __name__ == "__main__":
     parser.add_argument("--fp16", action="store_true",
                         help="Whether to use FP16 weights during inference.")
     parser.add_argument("--int8", action="store_true",
-                        help="Whether to use int8 weights during inference.")
+                        help="Whether to use INT8 weights during inference.")
     parser.add_argument("--batch_size", default=16, type=int,
                         help="Batch size for inference.")
     parser.add_argument("--top_k", default=1_000, type=int,
@@ -151,7 +152,7 @@ if __name__ == "__main__":
         if '.csv' in args.corpus:
             corpus = pd.read_csv(args.corpus, index_col=0)
             corpus.index = corpus.index.astype(str)
-            corpus = corpus.iloc[:,0].to_dict()
+            corpus = corpus.iloc[:, 0].to_dict()
         elif '.json' in args.corpus:
             corpus = pd.read_json(args.corpus, lines=True)
             id_col, text_col = corpus.columns[:2]
@@ -162,11 +163,11 @@ if __name__ == "__main__":
         if '.csv' in args.queries:
             queries = pd.read_csv(args.queries, index_col=0)
             queries.index = queries.index.astype(str)
-            queries = queries.iloc[:,0].to_dict()
+            queries = queries.iloc[:, 0].to_dict()
         elif '.tsv' in args.queries:
             queries = pd.read_csv(args.queries, header=None, sep='\t', index_col=0)
             queries.index = queries.index.astype(str)
-            queries = queries.iloc[:,0].to_dict()
+            queries = queries.iloc[:, 0].to_dict()
     
 
     input_run = args.input_run

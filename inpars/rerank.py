@@ -31,14 +31,16 @@ prediction_tokens = {
     'unicamp-dl/mt5-base-en-msmarco':       ['▁no'   , '▁yes'],
     'unicamp-dl/mt5-base-mmarco-v2':        ['▁no'   , '▁yes'],
     'unicamp-dl/mt5-base-mmarco-v1':        ['▁no'   , '▁yes'],
+    'unicamp-dl/mt5-13b-mmarco-100k':       ['▁'     , '▁true'],
 }
 
 
 class Reranker:
-    def __init__(self, silent=False, batch_size=8, fp16=False, torchscript=False, device=None):
+    def __init__(self, silent=False, batch_size=8, fp16=False, int8=False, torchscript=False, device=None):
         self.silent = silent
         self.batch_size = batch_size
         self.fp16 = fp16
+        self.int8 = int8
         self.torchscript = torchscript
         self.device = device
 
@@ -57,6 +59,9 @@ class MonoT5Reranker(Reranker):
         model_args = {}
         if self.fp16:
             model_args["torch_dtype"] = torch.float16
+        if self.int8:
+            model_args["load_in_8bit"] = True
+            model_args["device_map"] = "auto"
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path, **model_args)
         self.model = torch.compile(self.model)
         self.model.to(self.device)
@@ -91,12 +96,13 @@ class MonoT5Reranker(Reranker):
             total=ceil(len(pairs) / self.batch_size),
         ):
             prompts = [f"Query: {query} Document: {text} Relevant:" for (query, text) in batch]
+            max_length = self.tokenizer.model_max_length
             tokens = self.tokenizer(
                 prompts,
                 padding=True,
                 truncation=True,
                 return_tensors="pt",
-                max_length=self.tokenizer.model_max_length,
+                max_length=max_length if max_length < 1e5 else 512,
             ).to(self.device)
             output = self.model.generate(
                 **tokens,
@@ -131,6 +137,8 @@ if __name__ == "__main__":
                         help="CPU or CUDA device.")
     parser.add_argument("--fp16", action="store_true",
                         help="Whether to use FP16 weights during inference.")
+    parser.add_argument("--int8", action="store_true",
+                        help="Whether to use INT8 weights during inference.")
     parser.add_argument("--batch_size", default=16, type=int,
                         help="Batch size for inference.")
     parser.add_argument("--top_k", default=1_000, type=int,
@@ -141,12 +149,26 @@ if __name__ == "__main__":
         corpus = load_corpus(args.dataset, source=args.dataset_source)
         queries = load_queries(args.dataset, source=args.dataset_source)
     else:
-        corpus = pd.read_csv(args.corpus)
-        queries = pd.read_csv(args.queries)
-        queries = dict(zip(queries['query_id'], queries['text']))
+        if '.csv' in args.corpus:
+            corpus = pd.read_csv(args.corpus, index_col=0)
+            corpus.index = corpus.index.astype(str)
+            corpus = corpus.iloc[:, 0].to_dict()
+        elif '.json' in args.corpus:
+            corpus = pd.read_json(args.corpus, lines=True)
+            id_col, text_col = corpus.columns[:2]
+            corpus[id_col] = corpus[id_col].astype(str)
+            corpus = corpus.set_index(id_col)
+            corpus = corpus[text_col].to_dict()
+
+        if '.csv' in args.queries:
+            queries = pd.read_csv(args.queries, index_col=0)
+            queries.index = queries.index.astype(str)
+            queries = queries.iloc[:, 0].to_dict()
+        elif '.tsv' in args.queries:
+            queries = pd.read_csv(args.queries, header=None, sep='\t', index_col=0)
+            queries.index = queries.index.astype(str)
+            queries = queries.iloc[:, 0].to_dict()
     
-    # Convert to {'doc_id': 'text'} format
-    corpus = dict(zip(corpus['doc_id'], corpus['text']))
 
     input_run = args.input_run
     if args.dataset and not args.input_run:
@@ -156,6 +178,7 @@ if __name__ == "__main__":
         model_name_or_path=args.model,
         batch_size=args.batch_size,
         fp16=args.fp16,
+        int8=args.int8,
         device=args.device,
         # torchscript=args.torchscript,
     )

@@ -1,11 +1,14 @@
 import os
+import re
 import csv
 import json
 import random
 import argparse
+import subprocess
 import statistics
 import pandas as pd
 from tqdm import tqdm
+from pathlib import Path
 from transformers import set_seed
 from pyserini.search.lucene import LuceneSearcher
 from .dataset import load_corpus
@@ -20,16 +23,10 @@ if __name__ == '__main__':
                         help="The dataset source: ir_datasets or pyserini")
     parser.add_argument('--index', type=str, default='msmarco-passage')
     parser.add_argument('--max_hits', type=int, default=1000)
-    parser.add_argument("--device", default=None, type=str,
-                        help="CPU or CUDA device.")
-    parser.add_argument("--fp16", action="store_true",
-                        help="Whether to use FP16 weights during inference.")
-    parser.add_argument("--batch_size", default=16, type=int,
-                        help="Batch size for inference.")
     parser.add_argument('--n_samples', type=int, default=100)
+    parser.add_argument("--batch_size", default=32, type=int,
+                        help="Batch size retrieval.")
     parser.add_argument('--threads', type=int, default=12)
-    parser.add_argument('--source', default='ir_datasets',
-                        help="The dataset source: ir_datasets or pyserini")
     parser.add_argument('--seed', type=int, default=1)
     args = parser.parse_args()
 
@@ -42,7 +39,7 @@ if __name__ == '__main__':
         else:
             corpus = pd.read_json(args.input, lines=True)
     else:
-        corpus = load_corpus(args.dataset, args.source, source=args.dataset_source)
+        corpus = load_corpus(args.dataset, source=args.dataset_source)
         index = f'beir-v1.0.0-{args.dataset}-flat'
 
     # Convert to {'doc_id': 'text'} format
@@ -57,8 +54,9 @@ if __name__ == '__main__':
     n_docs_not_found = 0
     n_examples = 0
     queries = []
-    with open(args.input) as f:
-        for line in f:
+    with open(args.input) as f, open(f'{Path(args.output).parent}/topics-{args.dataset}.tsv', 'w') as out:
+        tsv_writer = csv.writer(out, delimiter='\t', lineterminator='\n')
+        for (i, line) in enumerate(f):
             row = json.loads(line.strip())
 
             if not row['query']:
@@ -67,26 +65,37 @@ if __name__ == '__main__':
 
             query = ' '.join(row["query"].split())  # Removes line breaks and tabs.
             queries.append((query, None, row['doc_id']))
+            tsv_writer.writerow([i, query])
 
-    print('Retrieving candidates...')
-    results = searcher.batch_search(
-        [q[0] for q in queries],
-        list(map(str, range(len(queries)))),
-        threads=args.threads,
-        k=args.max_hits + 1,
-    )
+    tmp_run = f'{Path(args.output).parent}/tmp-run-{args.dataset}.txt'
+    if not os.path.exists(tmp_run):
+        subprocess.run([
+            'python3', '-m', 'pyserini.search.lucene',
+                '--threads', '8',
+                '--batch-size', str(args.batch_size),
+                '--index', index,
+                '--topics', f'{Path(args.output).parent}/topics-{args.dataset}.tsv',
+                '--output', tmp_run,
+                '--bm25',
+        ])
+
+    results = {}
+    with open(tmp_run) as f:
+        for line in f:
+            qid, _, docid, rank, score, ranker = re.split(r"\s+", line.strip())
+            if qid not in results:
+                results[qid] = []
+            results[qid].append(docid)
 
     with open(args.output, 'w') as fout:
-        writer = csv.writer(fout, delimiter='\t', lineterminator='\n')
+        writer = csv.writer(fout, delimiter='\t', lineterminator='\n', quoting=csv.QUOTE_MINIMAL)
         for qid in tqdm(results, desc='Sampling'):
             hits = results[qid]
             query, log_probs, pos_doc_id = queries[int(qid)]
             n_examples += 1
             sampled_ranks = random.sample(range(len(hits)), min(len(hits), args.n_samples + 1))
             n_samples_so_far = 0
-            for rank, hit in enumerate(hits):
-                neg_doc_id = hit.docid
-
+            for (rank, neg_doc_id) in enumerate(hits):
                 if rank not in sampled_ranks:
                     continue
 
@@ -94,8 +103,8 @@ if __name__ == '__main__':
                     n_docs_not_found += 1
                     continue
 
-                pos_doc_text = corpus[pos_doc_id].strip()
-                neg_doc_text = corpus[neg_doc_id].strip()
+                pos_doc_text = corpus[pos_doc_id].replace('\n', ' ').strip()
+                neg_doc_text = corpus[neg_doc_id].replace('\n', ' ').strip()
 
                 writer.writerow([query, pos_doc_text, neg_doc_text])
                 n_samples_so_far += 1

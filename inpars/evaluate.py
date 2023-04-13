@@ -6,20 +6,22 @@ from pyserini.search import get_qrels_file
 from .utils import TRECRun
 
 
-def run_trec_eval(run_file, qrels_file, relevance_threshold=1):
-    result = subprocess.run(
-        [
-            "python3",
-            "-m",
-            "pyserini.eval.trec_eval",
-            "-c",
-            f"-l {relevance_threshold}",
-            "-mall_trec",
-            qrels_file,
-            run_file,
-        ],
-        stdout=subprocess.PIPE,
-    )
+def run_trec_eval(run_file, qrels_file, relevance_threshold=1, remove_unjudged=False):
+    args = [
+        "python3",
+        "-m",
+        "pyserini.eval.trec_eval",
+        "-c",
+        f"-l {relevance_threshold}",
+        "-m" , "all_trec",
+        "-m", "judged.10",
+    ]
+
+    if remove_unjudged:
+        args.append("-remove-unjudged")
+    args += [qrels_file, run_file]
+
+    result = subprocess.run(args, stdout=subprocess.PIPE)
     metrics = {}
     for line in result.stdout.decode("utf-8").split("\n"):
         for metric in [
@@ -30,8 +32,8 @@ def run_trec_eval(run_file, qrels_file, relevance_threshold=1):
             "ndcg_cut_10",
             "ndcg_cut_20",
             "map",
-            "P_20",
-            "P_30",
+            "P_10",
+            "judged_10",
         ]:
             # the space is to avoid getting metrics such as ndcg_cut_100 instead of ndcg_cut_10 as but start with ndcg_cut_10
             if line.startswith(metric + " ") or line.startswith(metric + "\t"):
@@ -41,11 +43,12 @@ def run_trec_eval(run_file, qrels_file, relevance_threshold=1):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run", type=str, required=True)
+    parser.add_argument("run", type=str)
     parser.add_argument("--dataset", default="msmarco")
     parser.add_argument("--qrels", default=None)
     parser.add_argument("--relevance_threshold", default=1)
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--remove_unjudged", action="store_true")
     args = parser.parse_args()
 
     if args.dataset == "msmarco":
@@ -63,7 +66,7 @@ if __name__ == "__main__":
         run = TRECRun(args.dataset)
         run_file = run.run_file
 
-    results = run_trec_eval(run_file, qrels_file, args.relevance_threshold)
+    results = run_trec_eval(run_file, qrels_file, args.relevance_threshold, args.remove_unjudged)
     if args.json:
         print(json.dumps(results))
     else:

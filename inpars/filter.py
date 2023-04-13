@@ -67,7 +67,7 @@ if __name__ == '__main__':
             batch_size=args.batch_size,
             fp16=args.fp16,
             device=args.device,
-            )
+        )
         query_scores = model.rescore([(synt_item['query'], corpus[synt_item['doc_id']]) for synt_item in dataset])
         for idx, synt_item in enumerate(dataset):
             synt_item['score'] = query_scores[idx]

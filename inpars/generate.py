@@ -25,6 +25,7 @@ if __name__ == "__main__":
     parser.add_argument('--revision', type=str, default=None)
     parser.add_argument('--fp16', action='store_true')
     parser.add_argument('--int8', action='store_true')
+    parser.add_argument('--torch_compile', action='store_true')
     parser.add_argument('--tf', action='store_true')
     parser.add_argument('--output', type=str, required=True)
     parser.add_argument('--seed', type=int, default=1)
@@ -66,6 +67,7 @@ if __name__ == "__main__":
         int8=args.int8,
         tf=args.tf,
         device=args.device,
+        torch_compile=args.torch_compile,
         # verbose=args.verbose,
     )
 

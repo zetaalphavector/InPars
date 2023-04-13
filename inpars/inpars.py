@@ -6,21 +6,25 @@ import statistics
 import pandas as pd
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
+import urllib.error
 from .prompt import Prompt
 
 def load_examples(corpus, n_fewshot_examples):
-    df = pd.read_json(
-        f'https://huggingface.co/datasets/inpars/fewshot-examples/resolve/main/data/{corpus}.json',
-        lines=True
-    )
-    # TODO limitar numero de exemplos (?)
-    df = df[['query_id', 'doc_id', 'query', 'document']].values.tolist()
-    random_examples = random.sample(df, n_fewshot_examples)
-    with open('query_ids_to_remove_from_eval.tsv', 'w') as fout:
-        for item in random_examples:
-            fout.write(f'{item[0]}\t{item[2]}\n')
+    try:
+        df = pd.read_json(
+            f'https://huggingface.co/datasets/inpars/fewshot-examples/resolve/main/data/{corpus}.json',
+            lines=True
+        )
+        # TODO limitar numero de exemplos (?)
+        df = df[['query_id', 'doc_id', 'query', 'document']].values.tolist()
+        random_examples = random.sample(df, n_fewshot_examples)
+        with open('query_ids_to_remove_from_eval.tsv', 'w') as fout:
+            for item in random_examples:
+                fout.write(f'{item[0]}\t{item[2]}\n')
 
-    return random_examples
+        return random_examples
+    except urllib.error.HTTPError:
+        return []
 
 
 class InPars:
@@ -39,6 +43,7 @@ class InPars:
         int8=False,
         device=None,
         tf=False,
+        torch_compile=False,
         verbose=False,
     ):
         self.corpus = corpus
@@ -81,7 +86,8 @@ class InPars:
             self.model = AutoModelForCausalLM.from_pretrained(
                 base_model, **model_kwargs
             )
-            self.model = torch.compile(self.model)
+            if torch_compile:
+                self.model = torch.compile(self.model)
             self.model.to(self.device)
             self.model.eval()
 

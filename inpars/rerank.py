@@ -31,16 +31,14 @@ prediction_tokens = {
     'unicamp-dl/mt5-base-en-msmarco':       ['▁no'   , '▁yes'],
     'unicamp-dl/mt5-base-mmarco-v2':        ['▁no'   , '▁yes'],
     'unicamp-dl/mt5-base-mmarco-v1':        ['▁no'   , '▁yes'],
-    'unicamp-dl/mt5-13b-mmarco-100k':       ['▁'     , '▁true'],
 }
 
 
 class Reranker:
-    def __init__(self, silent=False, batch_size=8, fp16=False, int8=False, torchscript=False, device=None):
+    def __init__(self, silent=False, batch_size=8, fp16=False, torchscript=False, device=None):
         self.silent = silent
         self.batch_size = batch_size
         self.fp16 = fp16
-        self.int8 = int8
         self.torchscript = torchscript
         self.device = device
 
@@ -52,18 +50,17 @@ class Reranker:
 class MonoT5Reranker(Reranker):
     name: str = 'MonoT5'
 
-    def __init__(self, model_name_or_path='castorini/monot5-base-msmarco-10k', token_false=None, token_true=True, **kwargs):
+    def __init__(self, model_name_or_path='castorini/monot5-base-msmarco-10k', token_false=None, token_true=True, torch_compile=False, **kwargs):
         super().__init__(**kwargs)
         if not self.device:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model_args = {}
         if self.fp16:
             model_args["torch_dtype"] = torch.float16
-        if self.int8:
-            model_args["load_in_8bit"] = True
-            model_args["device_map"] = "auto"
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path, **model_args)
-        self.model = torch.compile(self.model)
+        self.torch_compile = torch_compile
+        if torch_compile:
+            self.model = torch.compile(self.model)
         self.model.to(self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         self.token_false_id, self.token_true_id = self.get_prediction_tokens(
@@ -96,13 +93,13 @@ class MonoT5Reranker(Reranker):
             total=ceil(len(pairs) / self.batch_size),
         ):
             prompts = [f"Query: {query} Document: {text} Relevant:" for (query, text) in batch]
-            max_length = self.tokenizer.model_max_length
             tokens = self.tokenizer(
                 prompts,
                 padding=True,
                 truncation=True,
                 return_tensors="pt",
-                max_length=max_length if max_length < 1e5 else 512,
+                max_length=self.tokenizer.model_max_length,
+                pad_to_multiple_of=(8 if self.torch_compile else None),
             ).to(self.device)
             output = self.model.generate(
                 **tokens,
@@ -137,8 +134,8 @@ if __name__ == "__main__":
                         help="CPU or CUDA device.")
     parser.add_argument("--fp16", action="store_true",
                         help="Whether to use FP16 weights during inference.")
-    parser.add_argument("--int8", action="store_true",
-                        help="Whether to use INT8 weights during inference.")
+    parser.add_argument("--torch_compile", action="store_true",
+                        help="Whether to compile the model with `torch.compile`.")
     parser.add_argument("--batch_size", default=16, type=int,
                         help="Batch size for inference.")
     parser.add_argument("--top_k", default=1_000, type=int,
@@ -147,6 +144,7 @@ if __name__ == "__main__":
 
     if args.dataset:
         corpus = load_corpus(args.dataset, source=args.dataset_source)
+        corpus = dict(zip(corpus['doc_id'], corpus['text']))
         queries = load_queries(args.dataset, source=args.dataset_source)
     else:
         if '.csv' in args.corpus:
@@ -168,7 +166,6 @@ if __name__ == "__main__":
             queries = pd.read_csv(args.queries, header=None, sep='\t', index_col=0)
             queries.index = queries.index.astype(str)
             queries = queries.iloc[:, 0].to_dict()
-    
 
     input_run = args.input_run
     if args.dataset and not args.input_run:
@@ -178,8 +175,8 @@ if __name__ == "__main__":
         model_name_or_path=args.model,
         batch_size=args.batch_size,
         fp16=args.fp16,
-        int8=args.int8,
         device=args.device,
+        torch_compile=args.torch_compile,
         # torchscript=args.torchscript,
     )
 

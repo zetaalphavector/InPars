@@ -14,7 +14,12 @@ from transformers import (
 @dataclass
 class ExtraArguments:
     triples: str = field(
+        default=None,
         metadata={"help": "Triples file containing query, positive and negative examples (TSV format)."},
+    )
+    pairs: str = field(
+        default=None,
+        metadata={"help": "File containing pairs of query, passage and label (positive/negative) in TSV format."},
     )
     base_model: str = field(
         default="t5-base",
@@ -35,6 +40,16 @@ def split_triples(triples):
         examples['label'].append('true')
         examples['text'].append(f'Query: {triples["query"][i]} Document: {triples["negative"][i]} Relevant:')
         examples['label'].append('false')
+    return examples
+
+def split_pairs(pairs):
+    examples = {
+        'label': [],
+        'text': [],
+    }
+    for i in range(len(pairs['query'])):
+        examples['text'].append(f'Query: {pairs["query"][i]} Document: {pairs["passage"][i]} Relevant:')
+        examples['label'].append(['false', 'true'][int(pairs["label"][i])])
     return examples
 
 def tokenize(batch):
@@ -62,17 +77,33 @@ if __name__ == "__main__":
     model = AutoModelForSeq2SeqLM.from_pretrained(args.base_model)
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
 
-    dataset = load_dataset(
-        'csv',
-        data_files=args.triples,
-        sep='\t',
-        names=('query', 'positive', 'negative'),
-    )
-    dataset = dataset.map(
-        split_triples,
-        remove_columns=('query', 'positive', 'negative'),
-        batched=True,
-    )
+    if args.triples:
+        dataset = load_dataset(
+            'csv',
+            data_files=args.triples,
+            sep='\t',
+            names=('query', 'positive', 'negative'),
+        )
+        dataset = dataset.map(
+            split_triples,
+            remove_columns=('query', 'positive', 'negative'),
+            batched=True,
+        )
+    elif args.pairs:
+        dataset = load_dataset(
+            'csv',
+            data_files=args.pairs,
+            sep='\t',
+            names=('query', 'passage', 'label'),
+        )
+        dataset = dataset.map(
+            split_pairs,
+            remove_columns=('query', 'passage', 'passage'),
+            batched=True,
+        )
+    else:
+        raise Exception('We must define a triples or a pairs file.')
+
     if total_examples:
         dataset['train'] = dataset['train'].shuffle().select(range(total_examples))
     dataset = dataset.map(tokenize, remove_columns=('text', 'label'), batched=True, desc='Tokenizing')

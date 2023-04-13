@@ -10,7 +10,12 @@ def load_corpus(dataset_name, source='ir_datasets'):
 
     if source == 'ir_datasets':
         import ir_datasets
-        dataset = ir_datasets.load(f'beir/{dataset_name}')
+
+        identifier = f'beir/{dataset_name}'
+        if identifier in ir_datasets.registry._registered:
+            dataset = ir_datasets.load(identifier)
+        else:
+            dataset = ir_datasets.load(dataset_name)
 
         for doc in tqdm(
             dataset.docs_iter(), total=dataset.docs_count(), desc="Loading documents from ir-datasets"
@@ -25,7 +30,13 @@ def load_corpus(dataset_name, source='ir_datasets'):
             docs_ids.append(doc.doc_id)
     else:
         from pyserini.search.lucene import LuceneSearcher
-        dataset = LuceneSearcher.from_prebuilt_index(f'beir-v1.0.0-{dataset_name}-flat')
+        from pyserini.prebuilt_index_info import TF_INDEX_INFO
+
+        identifier = f'beir-v1.0.0-{dataset_name}.flat'
+        if identifier in TF_INDEX_INFO:
+            dataset = LuceneSearcher.from_prebuilt_index(identifier)
+        else:
+            dataset = LuceneSearcher.from_prebuilt_index(dataset_name)
 
         for idx in tqdm(range(dataset.num_docs), desc="Loading documents from Pyserini"):
             doc = json.loads(dataset.doc(idx).raw())

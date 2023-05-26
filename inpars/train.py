@@ -11,6 +11,15 @@ from transformers import (
     set_seed,
 )
 
+monot5_prompt = "Query: {query} Document: {text} Relevant:"
+flan_prompt = """Is the following passage relevant to the query?
+Query: {query}
+Passage: {text}"""
+
+monot5_outputs = ['false', 'true']
+flant5_outputs = ['no', 'yes']
+
+
 @dataclass
 class ExtraArguments:
     triples: str = field(
@@ -36,10 +45,10 @@ def split_triples(triples):
         'text': [],
     }
     for i in range(len(triples['query'])):
-        examples['text'].append(f'Query: {triples["query"][i]} Document: {triples["positive"][i]} Relevant:')
-        examples['label'].append('true')
-        examples['text'].append(f'Query: {triples["query"][i]} Document: {triples["negative"][i]} Relevant:')
-        examples['label'].append('false')
+        examples['text'].append(prompt_template.format(query=triples["query"][i], text=triples["positive"][i]))
+        examples['label'].append(token_true)
+        examples['text'].append(prompt_template.format(query=triples["query"][i], text=triples["negative"][i]))
+        examples['label'].append(token_false)
     return examples
 
 def split_pairs(pairs):
@@ -48,8 +57,8 @@ def split_pairs(pairs):
         'text': [],
     }
     for i in range(len(pairs['query'])):
-        examples['text'].append(f'Query: {pairs["query"][i]} Document: {pairs["passage"][i]} Relevant:')
-        examples['label'].append(['false', 'true'][int(pairs["label"][i])])
+        examples['text'].append(prompt_template.format(query=pairs["query"][i], text=pairs["passage"][i]))
+        examples['label'].append([token_false, token_true][int(pairs["label"][i])])
     return examples
 
 def tokenize(batch):
@@ -76,6 +85,13 @@ if __name__ == "__main__":
 
     model = AutoModelForSeq2SeqLM.from_pretrained(args.base_model)
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
+
+    if 'flan' in args.base_model:
+        prompt_template = flan_prompt
+        token_false, token_true = flant5_outputs
+    else:
+        prompt_template = monot5_prompt
+        token_false, token_true = monot5_outputs
 
     if args.triples:
         dataset = load_dataset(
@@ -106,7 +122,12 @@ if __name__ == "__main__":
 
     if total_examples:
         dataset['train'] = dataset['train'].shuffle().select(range(total_examples))
-    dataset = dataset.map(tokenize, remove_columns=('text', 'label'), batched=True, desc='Tokenizing')
+    dataset = dataset.map(
+        tokenize,
+        remove_columns=('text', 'label'),
+        batched=True,
+        desc='Tokenizing',
+    )
 
     trainer = Seq2SeqTrainer(
         model=model,

@@ -43,7 +43,7 @@ def run_trec_eval(run_file, qrels_file, relevance_threshold=1, remove_unjudged=F
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("run", type=str)
+    parser.add_argument("--run", required=True)
     parser.add_argument("--dataset", default="msmarco")
     parser.add_argument("--qrels", default=None)
     parser.add_argument("--relevance_threshold", default=1)

@@ -44,11 +44,14 @@ class Reranker:
 
     @classmethod
     def from_pretrained(cls, model_name_or_path, **kwargs):
+        if 'flan' in model_name_or_path:
+            return FLANT5Reranker(model_name_or_path, **kwargs)
         return MonoT5Reranker(model_name_or_path, **kwargs)
 
 
 class MonoT5Reranker(Reranker):
     name: str = 'MonoT5'
+    prompt_template: str = "Query: {query} Document: {text} Relevant:"
 
     def __init__(self, model_name_or_path='castorini/monot5-base-msmarco-10k', token_false=None, token_true=True, torch_compile=False, **kwargs):
         super().__init__(**kwargs)
@@ -92,7 +95,10 @@ class MonoT5Reranker(Reranker):
             desc="Rescoring",
             total=ceil(len(pairs) / self.batch_size),
         ):
-            prompts = [f"Query: {query} Document: {text} Relevant:" for (query, text) in batch]
+            prompts = [
+                self.prompt_template.format(query=query, text=text)
+                for (query, text) in batch
+            ]
             tokens = self.tokenizer(
                 prompts,
                 padding=True,
@@ -112,6 +118,18 @@ class MonoT5Reranker(Reranker):
             batch_scores = torch.nn.functional.log_softmax(batch_scores, dim=1)
             scores += batch_scores[:, 1].exp().tolist()
         return scores
+
+
+class FLANT5Reranker(MonoT5Reranker):
+    name: str = 'FLAN-T5'
+    prompt_template: str = """Is the following passage relevant to the query?
+Query: {query}
+Passage: {text}"""
+
+    def get_prediction_tokens(self, *args, **kwargs):
+        yes_token_id, *_ = self.tokenizer.encode('yes')
+        no_token_id, *_ = self.tokenizer.encode('no')
+        return no_token_id, yes_token_id
 
 
 if __name__ == "__main__":

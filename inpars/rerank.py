@@ -44,16 +44,27 @@ class Reranker:
 
     @classmethod
     def from_pretrained(cls, model_name_or_path, **kwargs):
-        if 'flan' in model_name_or_path:
-            return FLANT5Reranker(model_name_or_path, **kwargs)
-        return MonoT5Reranker(model_name_or_path, **kwargs)
+        config = AutoConfig.from_pretrained(model_name_or_path)
+        seq2seq = 'ForConditionalGeneration' in config.architectures
+        if seq2seq:
+            if 'flan' in model_name_or_path:
+                return FLANT5Reranker(model_name_or_path, **kwargs)
+            return MonoT5Reranker(model_name_or_path, **kwargs)
+        return MonoBERTReranker(model_name_or_path, **kwargs)
 
 
 class MonoT5Reranker(Reranker):
     name: str = 'MonoT5'
     prompt_template: str = "Query: {query} Document: {text} Relevant:"
 
-    def __init__(self, model_name_or_path='castorini/monot5-base-msmarco-10k', token_false=None, token_true=True, torch_compile=False, **kwargs):
+    def __init__(
+        self,
+        model_name_or_path='castorini/monot5-base-msmarco-10k',
+        token_false=None,
+        token_true=True,
+        torch_compile=False,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         if not self.device:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -86,7 +97,7 @@ class MonoT5Reranker(Reranker):
             token_true_id  = tokenizer.get_vocab()[token_true]
             return token_false_id, token_true_id
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def rescore(self, pairs: List[List[str]]):
         scores = []
         for batch in tqdm(
@@ -130,6 +141,51 @@ Passage: {text}"""
         yes_token_id, *_ = self.tokenizer.encode('yes')
         no_token_id, *_ = self.tokenizer.encode('no')
         return no_token_id, yes_token_id
+
+
+class MonoBERTReranker(Reranker):
+    name: str = 'MonoBERT'
+
+    def __init__(
+        self,
+        model_name_or_path='cross-encoder/ms-marco-MiniLM-L-6-v2',
+        torch_compile=False,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        if not self.device:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model_args = {}
+        if self.fp16:
+            model_args["torch_dtype"] = torch.float16
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            model_name_or_path,
+            **model_args,
+        )
+        self.model.to(self.device)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+
+    @torch.inference_mode()
+    def rescore(self, pairs: List[List[str]]):
+        scores = []
+        for batch in tqdm(
+            utils.chunks(pairs, self.batch_size),
+            disable=self.silent,
+            desc="Rescoring",
+            total=ceil(len(pairs) / self.batch_size),
+        ):
+            queries, texts = zip(*batch)
+            tokens = self.tokenizer(
+                queries,
+                texts,
+                padding=True,
+                truncation='only_second',
+                return_tensors="pt",
+                max_length=self.tokenizer.model_max_length,
+            ).to(self.device)
+            output = self.model(**tokens)[0]
+            scores += output.cpu().detach().tolist()
+        return scores
 
 
 if __name__ == "__main__":

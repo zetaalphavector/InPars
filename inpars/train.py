@@ -147,7 +147,11 @@ if __name__ == "__main__":
 
     config = AutoConfig.from_pretrained(args.base_model)
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
-    seq2seq = 'ForConditionalGeneration' in config.architectures
+    seq2seq = any(
+        True
+        for architecture in config.architectures
+        if 'ForConditionalGeneration' in architecture
+    )
 
     if seq2seq:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.base_model)

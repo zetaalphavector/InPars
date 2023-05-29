@@ -45,7 +45,11 @@ class Reranker:
     @classmethod
     def from_pretrained(cls, model_name_or_path, **kwargs):
         config = AutoConfig.from_pretrained(model_name_or_path)
-        seq2seq = 'ForConditionalGeneration' in config.architectures
+        seq2seq = any(
+            True
+            for architecture in config.architectures
+            if 'ForConditionalGeneration' in architecture
+        )
         if seq2seq:
             if 'flan' in model_name_or_path:
                 return FLANT5Reranker(model_name_or_path, **kwargs)

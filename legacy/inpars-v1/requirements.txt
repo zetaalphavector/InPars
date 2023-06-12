@@ -2,7 +2,7 @@ openai==0.11.3
 git+https://github.com/castorini/pygaggle.git
 faiss-cpu
 wandb==0.12.7
-transformers==4.17.0
+transformers==4.30.0
 sentence-transformers==2.1.0
 git+https://github.com/castorini/pygaggle/
 pyserini==0.14.0

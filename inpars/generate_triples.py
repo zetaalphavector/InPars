@@ -35,9 +35,9 @@ if __name__ == '__main__':
     index = args.index
     if os.path.exists(args.dataset):
         if args.dataset.endswith('.csv'):
-            corpus = pd.read_csv(args.input)
+            corpus = pd.read_csv(args.dataset)
         else:
-            corpus = pd.read_json(args.input, lines=True)
+            corpus = pd.read_json(args.dataset, lines=True)
     else:
         corpus = load_corpus(args.dataset, source=args.dataset_source)
         index = f'beir-v1.0.0-{args.dataset}-flat'

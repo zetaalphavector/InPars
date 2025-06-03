@@ -14,7 +14,7 @@ setup(
    install_requires=[
       'torch',
       'pyserini>=0.19',
-      'transformers>=4.0',
+      'transformers>=4.52',
       'pyyaml>=6.0',
       'ir_datasets>=0.5',
       'ftfy>=6.0',
